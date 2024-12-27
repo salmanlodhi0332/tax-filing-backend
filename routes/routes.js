@@ -9,8 +9,7 @@ const auth = require('../middleware/auth');
 // User Authentication Routes
 router.post('/signup', userController.signup);
 router.post('/login', userController.login);
-router.post('/adminLogin', userController.adminLogin);
-router.get('/getUser', userController.getUser);
+router.get('/getAllUser', userController.getAllUser);
 
 router.post('/createprofile',upload.single('image'), profileController.createProfile);
 router.get('/profile/:user_id', profileController.getUserProfile);

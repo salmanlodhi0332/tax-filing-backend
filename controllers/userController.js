@@ -8,23 +8,35 @@ const deleteImage = require('../utils/helperFunction');
 
 // Sign Up
 exports.signup = async (req, res) => {
-  const {firstName, lastName, email, phoneNumber, userRole, createDate, updateDate, visible} = req.body;
-  // const hashedPassword = await bcrypt.hash(password, 10);
+  const { firstName, lastName, email, phoneNumber, password, userRole, visible } = req.body;
 
-  console.log(
-    "body:", req.body);
-  
+  // Hash the password using bcrypt
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  console.log("body:", req.body);
 
   try {
+    // Check if the email already exists in the database
+    const [existingUser] = await db.execute('SELECT * FROM user_table WHERE email = ?', [email]);
+
+    if (existingUser.length > 0) {
+      // If the email exists, return a conflict error
+      return res.status(409).json({ message: 'This email already exists' });
+    }
+
+    // If email doesn't exist, proceed with inserting the new user
     const [result] = await db.execute(
-      'INSERT INTO user_table (firstName, lastName, email, phoneNumber, userRole, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [firstName, lastName, email, phoneNumber, userRole, visible]
+      'INSERT INTO user_table (firstName, lastName, email, phoneNumber, userRole, password, visible) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [firstName, lastName, email, phoneNumber, userRole, hashedPassword, visible]
     );
+
     return res.status(201).json({ message: 'User registered successfully!' });
   } catch (error) {
+    console.error(error);
     return res.status(500).json({ error: error.message });
   }
 };
+
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
@@ -36,7 +48,7 @@ exports.login = async (req, res) => {
 
   try {
     // Check if user exists in the database
-    const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
+    const [rows] = await db.execute('SELECT * FROM user_table WHERE email = ?', [email]);
 
     if (rows.length === 0) {
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -62,6 +74,10 @@ exports.login = async (req, res) => {
       id: user.id,
       email: user.email,
       name: user.username,
+      firstName: user.filename,
+      lastName: user.lastName,
+      phoneNumber:user.phoneNumber,
+      visible: user.visible
     };
 
     return res.json({ token, user: userResponse });
@@ -72,53 +88,12 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.adminLogin = async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    // Fetch user by email
-    const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
-
-    // Check if the user exists
-    if (rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    const user = rows[0];
-
-    // Check if the user is an admin (admin = 1)
-    if (user.admin !== 1) {
-      return res.status(403).json({ error: 'Access denied: Admins only' });
-    }
-
-    // Validate the password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log("isPasswordValid", isPasswordValid);
-    
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user.id, email: user.email, isAdmin: true }, // include isAdmin in the payload
-      process.env.JWT_SECRET,
-      // { expiresIn: '1h' } // Set token expiration if needed
-    );
-
-    // Return the JWT token
-    return res.json({ token });
-  } catch (error) {
-    // Return a 500 error with the error message
-    return res.status(500).json({ error: error.message });
-  }
-};
 
 // controllers/userController.js
-exports.getUser = async (req, res) => {
+exports.getAllUser = async (req, res) => {
   try {
     // Fetch all non-admin users
-    const [rows] = await db.execute('SELECT id, username AS name, email FROM users WHERE admin = 0');
+    const [rows] = await db.execute('select * from user_table where visible = 1;');
 
     // Check if any non-admin users were found
     if (rows.length === 0) {
