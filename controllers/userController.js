@@ -139,7 +139,6 @@ exports.getAllUser = async (req, res) => {
 // { 
 //   "email": "lodhi0332@gmail.com", 
 //   }
-
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
 
@@ -152,7 +151,7 @@ exports.forgotPassword = async (req, res) => {
     }
 
     // Generate a random OTP (e.g., a 6-digit number)
-    const otp = crypto.randomInt(100000, 999999).toString();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Store OTP and its expiry (for example, 10 minutes)
     const expiryTime = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
@@ -231,123 +230,3 @@ exports.resetPassword = async (req, res) => {
 
 
 
-// Create (with image upload)
-exports.createItem = async (req, res) => {
-  console.log('req.body:', req.body);    // Logs all form data (non-file fields)
-  console.log('req.file:', req.file);    // Logs the file object
-  
-  const { make, model, cartype, fueltype, transmission, doors, carcategory, seats } = req.body;
-  const imagePath = req.file ? req.file.filename : null;
-  
-  try {
-    const [result] = await db.execute(
-      'INSERT INTO cars (make, model, cartype, fueltype, transmission, doors, carcategory, seats,  image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
-      [make, model, cartype, fueltype, transmission, doors, carcategory, seats, imagePath]
-    );
-    return res.status(201).json({ message: 'Item created successfully!' });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Read all items
-exports.getAllItems = async (req, res) => {
-  try {
-    const [rows] = await db.execute('SELECT * FROM cars');
-    return res.json(rows);
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// Update item (and replace old image)
-exports.updateItem = async (req, res) => {
-  const { id } = req.params;
-  const { make, model, cartype, fueltype, transmission, doors, carcategory, seats } = req.body;
-  const newImagePath = req.file ? req.file.filename : null; // Get new image, if any
-
-  try {
-    // Fetch the existing item from the database using the provided ID
-    const [rows] = await db.execute('SELECT * FROM cars WHERE id = ?', [id]);
-
-    // If the car doesn't exist, return a 404 error
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-
-    const oldImagePath = rows[0].image; // Store the old image path
-
-    // If a new image is uploaded, delete the old image
-    if (newImagePath && oldImagePath) {
-      deleteImage(oldImagePath); // Delete the old image file
-    }
-
-    // Update the database with the new data
-    await db.execute(
-      `UPDATE cars 
-       SET make = ?, model = ?, cartype = ?, fueltype = ?, transmission = ?, doors = ?, 
-           carcategory = ?, seats = ?, image = ? 
-       WHERE id = ?`,
-      [
-        make,
-        model,
-        cartype,
-        fueltype,
-        transmission,
-        doors,
-        carcategory,
-        seats,
-        newImagePath || oldImagePath, // Use new image if available, otherwise retain old image
-        id
-      ]
-    );
-
-    // Return a success message
-    return res.json({ message: 'Item updated successfully!' });
-  } catch (error) {
-    // Catch and return any errors that occur
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// Delete item (also delete image)
-exports.deleteItem = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const [rows] = await db.execute('SELECT * FROM cars WHERE id = ?', [id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Item not found' });
-
-    const imagePath = rows[0].image;
-    if (imagePath) fs.unlinkSync(path.join(__dirname, `../public/images/${imagePath}`)); // Delete image
-
-    await db.execute('DELETE FROM cars WHERE id = ?', [id]);
-
-    return res.json({ message: 'Item deleted successfully!' });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
