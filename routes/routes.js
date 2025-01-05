@@ -22,11 +22,11 @@ router.put('/updateprofile/:id',upload.single('image'), profileController.update
 router.delete('/deleteprofile/:id',profileController.deleteUserProfile);
 
 // Case Notes Routes
-router.post('/api/case-notes', caseNotesController.createCaseNote);
-router.get('/api/case-notes', caseNotesController.getAllCaseNotes);
-router.get('/api/case-notes/:id', caseNotesController.getCaseNoteById);
-router.put('/api/case-notes/:id', caseNotesController.updateCaseNote);
-router.delete('/api/case-notes/:id', caseNotesController.deleteCaseNote);
+router.post('/caseNotes', caseNotesController.createCaseNote);
+router.get('/caseNotes', caseNotesController.getAllCaseNotes);
+router.get('/caseNotes/:id', caseNotesController.getCaseNoteById);
+router.put('/caseNotes/:id', caseNotesController.updateCaseNote);
+router.delete('/caseNotes/:id', caseNotesController.deleteCaseNote);
 
 
 

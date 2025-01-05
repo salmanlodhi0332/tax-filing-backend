@@ -1,8 +1,6 @@
 // controllers/userController.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
-const path = require('path');
 const db = require('../config/db');
 const deleteImage = require('../utils/helperFunction');
 const sendOTPEmail = require('../utils/emailSender');

@@ -21,9 +21,12 @@ exports.createCaseNote = async (req, res) => {
 // Get all case notes
 exports.getAllCaseNotes = async (req, res) => {
     try {
+        console.log("hit");
         const query = 'SELECT * FROM caseNotes_table';
-        const [results] = await db.promise().query(query);
-        res.status(200).json(results);
+            const [rows] = await db.execute(query);
+        
+        
+        res.status(200).json(rows);
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: 'Error fetching case notes' });
