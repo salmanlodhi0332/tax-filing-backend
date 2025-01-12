@@ -20,7 +20,7 @@ const sendOTPEmail = require('../utils/emailSender');
 //   }
 
 exports.signup = async (req, res) => {
-  const { firstName, lastName, email, phoneNumber, password, userRole, visible } = req.body;
+  const { firstName, lastName, email, phoneNumber, password } = req.body;
 
   // Hash the password using bcrypt
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -38,8 +38,8 @@ exports.signup = async (req, res) => {
 
     // If email doesn't exist, proceed with inserting the new user
     const [result] = await db.execute(
-      'INSERT INTO user_table (firstName, lastName, email, phoneNumber, userRole, password, visible) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [firstName, lastName, email, phoneNumber, userRole, hashedPassword, visible]
+      'INSERT INTO user_table (firstName, lastName, email, phoneNumber, userRole, password) VALUES (?, ?, ?, ?, ?, ?)',
+      [firstName, lastName, email, phoneNumber, 1, hashedPassword]
     );
 
     return res.status(201).json({ message: 'User registered successfully!' });
@@ -156,16 +156,14 @@ exports.forgotPassword = async (req, res) => {
     await db.execute('UPDATE user_table SET otp = ?, otp_expiry = ? WHERE email = ?', [otp, expiryTime, email]);
 
     // Send OTP to the user's email
-    await sendOTPEmail(email, otp);
+    // await sendOTPEmail(email, otp);
 
-    return res.status(200).json({ message: 'OTP sent successfully to your email!' });
+    return res.status(200).json({ message: 'OTP sent successfully to your email!' ,data :{Otp:otp}});
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'An error occurred, please try again later.' });
   }
 };
-
-
 exports.verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
 
@@ -173,17 +171,21 @@ exports.verifyOTP = async (req, res) => {
     // Retrieve the stored OTP and expiry time from the database
     const [user] = await db.execute('SELECT otp, otp_expiry FROM user_table WHERE email = ?', [email]);
 
+
+    console.log([user])
+
     if (user.length === 0) {
       return res.status(404).json({ message: 'No user found with that email address.' });
     }
 
     const { otp: storedOtp, otp_expiry: expiryTime } = user[0];
 
-    // Check if the OTP matches and if it's expired
-    if (storedOtp !== otp) {
+    // Convert the stored OTP and input OTP to strings to avoid type issues
+    if (storedOtp.toString().trim() !== otp.toString().trim()) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
 
+    // Check if the OTP has expired
     if (Date.now() > expiryTime) {
       return res.status(400).json({ message: 'OTP has expired' });
     }

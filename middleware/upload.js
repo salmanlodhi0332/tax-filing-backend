@@ -5,7 +5,7 @@ const path = require('path');
 // Configure storage for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'public/images');
+    cb(null, 'public/docs');
   },
   filename: (req, file, cb) => {
     // Generate a unique name for the file
@@ -15,13 +15,15 @@ const storage = multer.diskStorage({
   }
 });
 
-// Filter for image files
+
 const fileFilter = (req, file, cb) => {
-  const ext = path.extname(file.originalname);
-  
-  if (ext !== '.png' && ext !== '.jpg' && ext !== '.jpeg' && ext !== '.webp') {
-    return cb(new Error('Only images are allowed!'), false);
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  // Check for allowed document extensions
+  if (ext !== '.pdf' && ext !== '.doc' && ext !== '.docx' && ext !== '.xls' && ext !== '.xlsx') {
+    return cb(new Error('Only PDF, Word, and Excel documents are allowed!'), false);
   }
+  
   cb(null, true);
 };
 
