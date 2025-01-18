@@ -10,7 +10,7 @@ exports.createCaseNote = async (req, res) => {
 
     try {
         const query = 'INSERT INTO caseNotes_table (caseId, CaseNotes, createdbyId) VALUES (?, ?, ?)';
-        const [result] = await db.promise().query(query, [caseId, CaseNotes, createdbyId]);
+        const [result] = await db.execute(query, [caseId, CaseNotes, createdbyId]); // Use db.execute() directly without promise()
         res.status(201).json({ id: result.insertId, caseId, CaseNotes, createdbyId });
     } catch (err) {
         console.error(err);
@@ -18,15 +18,16 @@ exports.createCaseNote = async (req, res) => {
     }
 };
 
+
 // Get all case notes
 exports.getAllCaseNotes = async (req, res) => {
     try {
         console.log("hit");
         const query = 'SELECT * FROM caseNotes_table';
-            const [rows] = await db.execute(query);
-        
-        
-        res.status(200).json(rows);
+        const [rows] = await db.execute(query);
+
+        // Return the response in the desired format
+        res.status(200).json({ casenotes: rows });
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: 'Error fetching case notes' });
@@ -54,12 +55,12 @@ exports.getCaseNoteById = async (req, res) => {
 
 // Update a case note
 exports.updateCaseNote = async (req, res) => {
-    const { id } = req.params;
-    const { caseId, CaseNotes, createdbyId } = req.body;
+    
+    const { id, caseId, CaseNotes, createdbyId } = req.body;
 
     try {
         const query = 'UPDATE caseNotes_table SET caseId = ?, CaseNotes = ?, createdbyId = ? WHERE id = ?';
-        const [result] = await db.promise().query(query, [caseId, CaseNotes, createdbyId, id]);
+        const [result] = await db.execute(query, [caseId, CaseNotes, createdbyId, id]); // Removed .promise()
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Case note not found' });
@@ -72,13 +73,14 @@ exports.updateCaseNote = async (req, res) => {
     }
 };
 
+
 // Delete a case note
 exports.deleteCaseNote = async (req, res) => {
     const { id } = req.params;
 
     try {
         const query = 'DELETE FROM caseNotes_table WHERE id = ?';
-        const [result] = await db.promise().query(query, [id]);
+        const [result] = await db.execute(query, [id]); // Removed .promise()
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Case note not found' });

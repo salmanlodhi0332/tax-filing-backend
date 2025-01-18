@@ -22,7 +22,13 @@ router.get('/profile/:user_id', profileController.getUserProfile);
 router.put('/updateprofile/:id',upload.single('image'), profileController.updateUserProfile);
 router.delete('/deleteprofile/:id',profileController.deleteUserProfile);
 
+
+
 router.post('/createCase', upload.array('documents'),caseController.createCase);
+router.patch('/editCaseDocuments', upload.array('documents'), caseController.editCaseDocuments);
+router.patch('/updateCaseStatus', caseController.updateCaseStatus);
+router.get('/getAllCases', caseController.getAllCases);
+router.get('/getCaseById/:caseId', caseController.getCaseById);
 
 // Case Notes Routes
 router.post('/caseNotes', caseNotesController.createCaseNote);
