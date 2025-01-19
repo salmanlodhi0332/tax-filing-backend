@@ -11,11 +11,11 @@ const db = require('../config/db');
     return caseNo;
   }
 
-  
   exports.createCase = async (req, res) => {
     console.log('Files uploaded:', req.files);  // Log to verify files are present
+  
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: 'No documents uploaded' });
+      return res.status(400).json({ statusCode: 400, message: 'No documents uploaded' });
     }
   
     const { taxYear, status, userId } = req.body;
@@ -31,12 +31,15 @@ const db = require('../config/db');
   
       const caseId = result.insertId;
   
+      // Insert documents for the case
       for (const docPath of documentPaths) {
         const docQuery = 'INSERT INTO casedos_table (caseId, documentPath, createDate) VALUES (?, ?, ?)';
         await db.execute(docQuery, [caseId, docPath, new Date()]);
       }
   
+      // Return success response
       return res.status(201).json({
+        statusCode: 201,
         message: 'Case created successfully!',
         caseNo: caseNo,
         documents: documentPaths,
@@ -44,49 +47,51 @@ const db = require('../config/db');
   
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ message: 'Failed to create case or insert documents', error: error.message });
+      return res.status(500).json({ statusCode: 500, message: 'Failed to create case or insert documents', error: error.message });
     }
   };
-
+  
 
 
   exports.editCaseDocuments = async (req, res) => {
     const { caseId } = req.body;
     const updatedDocumentPaths = req.files ? req.files.map(file => file.path) : [];
-
+  
     if (!caseId) {
-        return res.status(400).json({ message: 'Case ID is required' });
+      return res.status(400).json({ statusCode: 400, message: 'Case ID is required' });
     }
-
+  
     if (updatedDocumentPaths.length === 0) {
-        return res.status(400).json({ message: 'No documents uploaded' });
+      return res.status(400).json({ statusCode: 400, message: 'No documents uploaded' });
     }
-
+  
     try {
-        // Check if the case exists
-        const checkQuery = 'SELECT id FROM case_table WHERE id = ?';
-        const [caseResult] = await db.execute(checkQuery, [caseId]);
-
-        if (caseResult.length === 0) {
-            return res.status(404).json({ message: 'Case not found' });
-        }
-
-        // Insert new documents
-        for (const docPath of updatedDocumentPaths) {
-            const docQuery = 'INSERT INTO casedos_table (caseId, documentPath, createDate) VALUES (?, ?, ?)';
-            await db.execute(docQuery, [caseId, docPath, new Date()]);
-        }
-
-        return res.status(200).json({
-            message: 'Documents updated successfully!',
-            documents: updatedDocumentPaths,
-        });
-
+      // Check if the case exists
+      const checkQuery = 'SELECT id FROM case_table WHERE id = ?';
+      const [caseResult] = await db.execute(checkQuery, [caseId]);
+  
+      if (caseResult.length === 0) {
+        return res.status(404).json({ statusCode: 404, message: 'Case not found' });
+      }
+  
+      // Insert new documents
+      for (const docPath of updatedDocumentPaths) {
+        const docQuery = 'INSERT INTO casedos_table (caseId, documentPath, createDate) VALUES (?, ?, ?)';
+        await db.execute(docQuery, [caseId, docPath, new Date()]);
+      }
+  
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'Documents updated successfully!',
+        documents: updatedDocumentPaths,
+      });
+  
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Failed to update documents', error: error.message });
+      console.error(error);
+      return res.status(500).json({ statusCode: 500, message: 'Failed to update documents', error: error.message });
     }
-};
+  };
+  
 
 exports.updateCaseStatus = async (req, res) => {
   const { caseId, status } = req.body;

@@ -58,13 +58,12 @@ exports.signup = async (req, res) => {
 //   "email": "lodhi0332@gmail.com", 
 //   "password":"password"
 //   }
-
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   // Check for missing fields
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+    return res.status(400).json({ statusCode: 400, error: 'Email and password are required' });
   }
 
   try {
@@ -72,7 +71,7 @@ exports.login = async (req, res) => {
     const [rows] = await db.execute('SELECT * FROM user_table WHERE email = ?', [email]);
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ statusCode: 401, error: 'Invalid email or password' });
     }
 
     const user = rows[0];
@@ -80,34 +79,85 @@ exports.login = async (req, res) => {
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ statusCode: 401, error: 'Invalid email or password' });
     }
 
     // Generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email },
-      process.env.JWT_SECRET || 'default_jwt_secret', // Fallback to default secret if not found
-      // { expiresIn: '1h' } // Optional expiration time
+      process.env.JWT_SECRET || 'default_jwt_secret',
     );
 
-    // Send the token and user info as response
+    // Get the list of cases associated with the user
+    const casesQuery = `
+      SELECT 
+          c.id AS caseId, 
+          c.caseNo, 
+          c.taxYear, 
+          c.status, 
+          cd.documentPath, 
+          cd.createDate
+      FROM case_table c
+      LEFT JOIN casedos_table cd ON c.id = cd.caseId
+      WHERE c.userId = ?;
+    `;
+
+    const [userCases] = await db.execute(casesQuery, [user.id]);
+
+    // Organize cases into an array
+    const casesList = [];
+    
+    userCases.forEach((caseItem) => {
+      // Check if the case already exists in the cases list
+      let existingCase = casesList.find(c => c.caseId === caseItem.caseId);
+
+      if (!existingCase) {
+        // If this is a new case, add it to the list
+        existingCase = {
+          caseId: caseItem.caseId,
+          caseNo: caseItem.caseNo,
+          taxYear: caseItem.taxYear,
+          status: caseItem.status,
+          documents: []  // Initialize documents array
+        };
+        casesList.push(existingCase);
+      }
+
+      // Add the document to the case's documents array
+      if (caseItem.documentPath) {
+        existingCase.documents.push({
+          documentPath: caseItem.documentPath,
+          createDate: caseItem.createDate,
+        });
+      }
+    });
+
+    // Prepare the user response
     const userResponse = {
       id: user.id,
       email: user.email,
       name: user.username,
-      firstName: user.filename,
+      firstName: user.firstName,
       lastName: user.lastName,
-      phoneNumber:user.phoneNumber,
-      visible: user.visible
+      phoneNumber: user.phoneNumber,
+      visible: user.visible,
+      cases: casesList,
     };
 
-    return res.json({ token, user: userResponse });
+    // Return the response with token, user data, and statusCode
+    return res.json({
+      statusCode: 200,
+      token,
+      user: userResponse,
+    });
 
   } catch (error) {
     console.error('Error during login:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ statusCode: 500, error: 'Internal server error', message: error.message });
   }
 };
+
+
 
 
 // get all users
