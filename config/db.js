@@ -6,7 +6,7 @@ const pool = mysql.createPool({
   host: "localhost",
   user: "root",
   password: "",
-  database: "taxDashboard_db",
+  database: "taxdashboard_db",
 });
 
 module.exports = pool.promise(); // Using promise-based queries

@@ -15,10 +15,13 @@ app.use(cors());
 
 // OR Enable CORS for specific origin (e.g., only allow requests from localhost:3001)
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'], // Allow both origins
+  origin: ['http://localhost:3000','https://taxsavvy-five.vercel.app'], // Allow both origins
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allow specific HTTP methods
   allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
 }));
+app.get('/', (req, res) => {
+  res.send('Welcome to the app');
+});
 
 
 app.use(bodyParser.json());
@@ -30,7 +33,7 @@ app.use('/images', express.static('public/images'));
 app.use('/api', userRoutes);
 
 // Start the server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
