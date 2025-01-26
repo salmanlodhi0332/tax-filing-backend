@@ -88,6 +88,7 @@ exports.login = async (req, res) => {
       process.env.JWT_SECRET || 'default_jwt_secret',
     );
 
+
     // Get the list of cases associated with the user
     const casesQuery = `
       SELECT 
@@ -97,6 +98,7 @@ exports.login = async (req, res) => {
           c.status, 
           cd.documentPath, 
           cd.createDate
+cd.id
       FROM case_table c
       LEFT JOIN casedos_table cd ON c.id = cd.caseId
       WHERE c.userId = ?;
@@ -126,6 +128,7 @@ exports.login = async (req, res) => {
       // Add the document to the case's documents array
       if (caseItem.documentPath) {
         existingCase.documents.push({
+doc_id:caseItem.id
           documentPath: caseItem.documentPath,
           createDate: caseItem.createDate,
         });
