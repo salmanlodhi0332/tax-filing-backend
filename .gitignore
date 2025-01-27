@@ -1,11 +1,11 @@
-# Dependencies
-node_modules
+# Node modules
+/node_modules/
 
 # Next.js Build Output
-.next
+.next/
 
 # IntelliJ IDEA project files
-.idea
+.idea/
 
 # Logs
 npm-debug.log*
@@ -22,10 +22,10 @@ yarn-error.log*
 Thumbs.db
 
 # Vercel Deployment
-.vercel
+.vercel/
 
-# Build Output
-out
+# Build Output (for static exports)
+out/
 
 # TypeScript
 *.tsbuildinfo
@@ -34,4 +34,3 @@ out
 coverage/
 .vscode/
 *.log
-
