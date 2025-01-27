@@ -96,6 +96,7 @@ exports.login = async (req, res) => {
           c.taxYear, 
           c.status, 
           cd.documentPath, 
+          cd.id,
           cd.createDate
       FROM case_table c
       LEFT JOIN casedos_table cd ON c.id = cd.caseId
@@ -126,6 +127,7 @@ exports.login = async (req, res) => {
       // Add the document to the case's documents array
       if (caseItem.documentPath) {
         existingCase.documents.push({
+          doc_id: caseItem.id,
           documentPath: caseItem.documentPath,
           createDate: caseItem.createDate,
         });
@@ -140,8 +142,8 @@ exports.login = async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       phoneNumber: user.phoneNumber,
+      role: user.userRole,
       visible: user.visible,
-      role: user.role,
       cases: casesList,
     };
 

@@ -133,9 +133,6 @@ exports.updateCaseStatus = async (req, res) => {
 };
 
 
-
-
-
 exports.getAllCases = async (req, res) => {
   try {
       // Query to get all cases with user data and document paths
@@ -151,6 +148,7 @@ exports.getAllCases = async (req, res) => {
               u.email AS userEmail, 
               u.phoneNumber, 
               cd.documentPath, 
+              cd.id,
               cd.createDate
           FROM case_table c
           LEFT JOIN user_table u ON c.userId = u.id
@@ -193,7 +191,8 @@ exports.getAllCases = async (req, res) => {
           // Add the document for this case
           if (caseItem.documentPath) {
               currentCase.documents.push({
-                  documentPath: caseItem.documentPath,
+                doc_id: caseItem.id,
+                documentPath: caseItem.documentPath,                
                   createDate: caseItem.createDate,
               });
           }
@@ -212,6 +211,61 @@ exports.getAllCases = async (req, res) => {
   } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Failed to retrieve cases', error: error.message });
+  }
+};
+
+
+exports.deleteCaseDocument = async (req, res) => {
+  const { caseId, documentId } = req.body;  // documentId identifies the document to delete
+  
+  if (!caseId) {
+    return res.status(400).json({ statusCode: 400, message: 'Case ID is required' });
+  }
+  
+  if (!documentId) {
+    return res.status(400).json({ statusCode: 400, message: 'Document ID is required' });
+  }
+  
+  try {
+    // Check if the case exists
+    const checkCaseQuery = 'SELECT id FROM case_table WHERE id = ?';
+    const [caseResult] = await db.execute(checkCaseQuery, [caseId]);
+    
+    if (caseResult.length === 0) {
+      return res.status(404).json({ statusCode: 404, message: 'Case not found' });
+    }
+    
+    // Check if the document exists for this case
+    const checkDocumentQuery = 'SELECT documentPath FROM casedos_table WHERE caseId = ? AND id = ?';
+    const [docResult] = await db.execute(checkDocumentQuery, [caseId, documentId]);
+    
+    if (docResult.length === 0) {
+      return res.status(404).json({ statusCode: 404, message: 'Document not found for this case' });
+    }
+    
+    // Delete the document record from the database
+    const deleteDocQuery = 'DELETE FROM casedos_table WHERE caseId = ? AND id = ?';
+    await db.execute(deleteDocQuery, [caseId, documentId]);
+
+    // Optionally, delete the file from the server or cloud storage
+    const docPath = docResult[0].documentPath;
+    const fs = require('fs');
+    const path = require('path');
+    
+    const filePath = path.resolve(__dirname, docPath);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);  // Delete the file from the filesystem
+    }
+    
+    return res.status(200).json({
+      statusCode: 200,
+      message: 'Document deleted successfully!',
+      documentId: documentId,
+    });
+    
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ statusCode: 500, message: 'Failed to delete document', error: error.message });
   }
 };
 
@@ -238,9 +292,10 @@ exports.getCaseById = async (req, res) => {
               u.email AS userEmail, 
               u.phoneNumber, 
               cd.documentPath, 
+              cd.id,
               cd.createDate
           FROM case_table c
-          LEFT JOIN users u ON c.userId = u.id
+          LEFT JOIN user_table u ON c.userId = u.id
           LEFT JOIN casedos_table cd ON c.id = cd.caseId
           WHERE c.id = ?
       `;
@@ -272,6 +327,7 @@ exports.getCaseById = async (req, res) => {
       cases.forEach((caseItem) => {
           if (caseItem.documentPath) {
               caseWithDocs.documents.push({
+                  doc_id: caseItem.id,
                   documentPath: caseItem.documentPath,
                   createDate: caseItem.createDate,
               });
@@ -286,5 +342,99 @@ exports.getCaseById = async (req, res) => {
   } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Failed to retrieve case', error: error.message });
+  }
+};
+
+
+
+exports.getAllCasesByUserId = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ message: 'User ID is required' });
+  }
+
+  try {
+    // Query to get all cases for the specific user, including associated documents
+    const query = `
+        SELECT 
+            c.id AS caseId, 
+            c.caseNo, 
+            c.taxYear, 
+            c.status, 
+            u.id AS userId,
+            u.firstName, 
+            u.lastName, 
+            u.email AS userEmail, 
+            u.phoneNumber, 
+            cd.documentPath, 
+            cd.id,
+            cd.createDate
+        FROM case_table c
+        LEFT JOIN user_table u ON c.userId = u.id
+        LEFT JOIN casedos_table cd ON c.id = cd.caseId
+        WHERE c.userId = ?
+    `;
+
+    const [cases] = await db.execute(query, [userId]);
+
+    // If no cases are found
+    if (cases.length === 0) {
+      return res.status(404).json({ message: 'No cases found for this user' });
+    }
+
+    // Organize the result to group documents and user data
+    const casesWithDocs = [];
+
+    cases.forEach((caseItem) => {
+      const existingCase = casesWithDocs.find(c => c.caseId === caseItem.caseId);
+      
+      if (!existingCase) {
+        // Create a new case entry
+        const newCase = {
+          caseId: caseItem.caseId,
+          caseNo: caseItem.caseNo,
+          taxYear: caseItem.taxYear,
+          status: caseItem.status,
+          user: {
+            userId: caseItem.userId,
+            firstName: caseItem.firstName,
+            lastName: caseItem.lastName,
+            email: caseItem.userEmail,
+            phoneNumber: caseItem.phoneNumber,
+          },
+          documents: [],
+        };
+
+        // Add the document for this case
+        if (caseItem.documentPath) {
+          newCase.documents.push({
+            doc_id: caseItem.id,
+            documentPath: caseItem.documentPath,
+            createDate: caseItem.createDate,
+          });
+        }
+
+        casesWithDocs.push(newCase);
+      } else {
+        // If case already exists, just add the document to the existing case
+        if (caseItem.documentPath) {
+          existingCase.documents.push({
+            doc_id: caseItem.id,
+            documentPath: caseItem.documentPath,
+            createDate: caseItem.createDate,
+          });
+        }
+      }
+    });
+
+    return res.status(200).json({
+      message: 'Cases retrieved successfully',
+      cases: casesWithDocs,
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Failed to retrieve cases', error: error.message });
   }
 };
