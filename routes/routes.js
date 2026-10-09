@@ -10,10 +10,13 @@ const auth = require('../middleware/auth');
 
 // User Authentication Routes
 router.post('/signup', userController.signup);
+router.post('/verifySignupOtp', userController.verifySignupOtp);
 router.post('/login', userController.login);
 router.post('/forgotPassword', userController.forgotPassword);
 router.post('/verifyOTP', userController.verifyOTP);
+router.post('/resendOtp', userController.resendOtp);
 router.post('/resetPassword', userController.resetPassword);
+
 
 //profile Routes
 router.get('/getAllUser', userController.getAllUser);
@@ -21,6 +24,7 @@ router.post('/createprofile',upload.single('image'), profileController.createPro
 router.get('/profile/:user_id', profileController.getUserProfile);
 router.put('/updateprofile/:id',upload.single('image'), profileController.updateUserProfile);
 router.delete('/deleteprofile/:id',profileController.deleteUserProfile);
+router.put('/editProfile', userController.editProfile);
 
 
 // Cases Routes
@@ -31,8 +35,18 @@ router.get('/getAllCases', caseController.getAllCases);
 router.delete('/deleteCaseDocument', caseController.deleteCaseDocument);
 router.get('/getCaseById/:caseId', caseController.getCaseById);
 router.get('/getAllCasesByUserId/:userId', caseController.getAllCasesByUserId);
+router.get('/notifications', caseController.getAllNotifications);
+// Questionnaire Routes
 
-         
+router.post(
+    '/questionnaire',
+    upload.single('questionnaire'),
+    caseController.uploadQuestionnaire
+);
+router.get(
+    '/questionnaire',
+    caseController.getQuestionnaire
+);         
 // Case Notes Routes
 router.post('/caseNotes', caseNotesController.createCaseNote);
 router.get('/caseNotes', caseNotesController.getAllCaseNotes);

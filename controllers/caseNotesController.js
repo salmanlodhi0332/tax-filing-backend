@@ -24,7 +24,7 @@ exports.createCaseNote = async (req, res) => {
 exports.getAllCaseNotes = async (req, res) => {
     try {
         console.log("hit");
-        const query = 'SELECT * FROM caseNotes_table';
+        const query = 'SELECT * FROM casenotes_table';
         const [rows] = await db.execute(query);
 
         // Return the response in the desired format
